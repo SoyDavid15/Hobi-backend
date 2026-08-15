@@ -11,6 +11,11 @@ supabase = create_client(
     os.getenv("SUPABASE_ANON_KEY"),
 )
 
+supabase_admin = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
+)
+
 router = APIRouter(prefix="/hobbies", tags=["hobbies"])
 
 
@@ -29,17 +34,26 @@ def get_current_user(authorization: str = Header(..., alias="Authorization")) ->
 
 @router.get("")
 def get_hobbies(user_id: str = Depends(get_current_user)):
-    res = supabase.table("user_hobbies").select("hobby_id").eq("user_id", user_id).execute()
+    try:
+        res = supabase_admin.table("user_hobbies").select("hobby_id").eq("user_id", user_id).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar hobbies: {e}")
     return {"hobbies": [row["hobby_id"] for row in res.data]}
 
 
 @router.post("/{hobby_id}")
 def add_hobby(hobby_id: str, user_id: str = Depends(get_current_user)):
-    supabase.table("user_hobbies").insert({"user_id": user_id, "hobby_id": hobby_id}).execute()
+    try:
+        supabase_admin.table("user_hobbies").insert({"user_id": user_id, "hobby_id": hobby_id}).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar hobby: {e}")
     return {"success": True}
 
 
 @router.delete("/{hobby_id}")
 def remove_hobby(hobby_id: str, user_id: str = Depends(get_current_user)):
-    supabase.table("user_hobbies").delete().eq("user_id", user_id).eq("hobby_id", hobby_id).execute()
+    try:
+        supabase_admin.table("user_hobbies").delete().eq("user_id", user_id).eq("hobby_id", hobby_id).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al eliminar hobby: {e}")
     return {"success": True}
