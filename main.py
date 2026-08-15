@@ -15,6 +15,10 @@ app.add_middleware(
 
 app.include_router(hobbies_router)
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
 @app.get("/message")
 def message():
     return get_message()
