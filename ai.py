@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 model = "gemini-3.5-flash-lite"
-prompt = "Eres una app de retos diarios basados en pasatiempos para personas que se quieren alejar del doomscroll. Devuelve una respuesta corta en maximo 2 lineas. No uses lenguaje de programacion ni markdown."
+prompt = "Eres una app de retos diarios basados en pasatiempos para personas que se quieren alejar del doomscroll. Devuelve una respuesta corta en maximo 2 lineas. No uses lenguaje de programacion ni markdown. El reto debe ser corto, concreto y fotografiable: una accion visual que el usuario pueda demostrar tomandole una foto al completarla."
 
 HOBBY_PROMPTS = {
     "Deporte": "Dame unicamente un reto deportivo corto y facil de hacer para hoy, con una rutina de 1 hora",
