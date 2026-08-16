@@ -37,6 +37,24 @@ def get_user_hobbies(user_id: str) -> list[str]:
     return [row["hobby_id"] for row in res.data]
 
 
+def get_daily_challenge(user_id: str, challenge_date: str) -> str | None:
+    res = (
+        supabase_admin.table("daily_challenges")
+        .select("challenge")
+        .eq("user_id", user_id)
+        .eq("challenge_date", challenge_date)
+        .maybe_single()
+        .execute()
+    )
+    return res.data["challenge"] if res.data else None
+
+
+def save_daily_challenge(user_id: str, challenge_date: str, hobby_id: str, challenge: str) -> None:
+    supabase_admin.table("daily_challenges").insert(
+        {"user_id": user_id, "challenge_date": challenge_date, "hobby_id": hobby_id, "challenge": challenge}
+    ).execute()
+
+
 @router.get("")
 def get_hobbies(user_id: str = Depends(get_current_user)):
     try:

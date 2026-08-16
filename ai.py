@@ -1,5 +1,6 @@
 import os
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,5 +24,9 @@ def get_message(hobby: str) -> str:
         f"Dame unicamente un reto de {hobby} corto y facil de hacer para hoy, con una rutina de 1 hora",
     )
     client = genai.Client(api_key=os.getenv("GEMINI_KEY"))
-    response = client.models.generate_content(model=model, contents=prompt + extra)
-    return response.text
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt + extra,
+        config=types.GenerateContentConfig(temperature=0),
+    )
+    return "\n".join(response.text.strip().splitlines()[:2])
