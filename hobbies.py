@@ -32,13 +32,18 @@ def get_current_user(authorization: str = Header(..., alias="Authorization")) ->
     return res.user.id
 
 
+def get_user_hobbies(user_id: str) -> list[str]:
+    res = supabase_admin.table("user_hobbies").select("hobby_id").eq("user_id", user_id).execute()
+    return [row["hobby_id"] for row in res.data]
+
+
 @router.get("")
 def get_hobbies(user_id: str = Depends(get_current_user)):
     try:
-        res = supabase_admin.table("user_hobbies").select("hobby_id").eq("user_id", user_id).execute()
+        hobbies = get_user_hobbies(user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar hobbies: {e}")
-    return {"hobbies": [row["hobby_id"] for row in res.data]}
+    return {"hobbies": hobbies}
 
 
 @router.post("/{hobby_id}")

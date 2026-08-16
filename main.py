@@ -1,7 +1,11 @@
-from fastapi import FastAPI
+import random
+from datetime import date
+
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from ai import get_message
-from hobbies import router as hobbies_router
+from hobbies import get_current_user, get_user_hobbies, router as hobbies_router
 
 
 app = FastAPI()
@@ -20,5 +24,10 @@ def root():
     return {"status": "ok"}
 
 @app.get("/message")
-def message():
-    return get_message()
+def message(user_id: str = Depends(get_current_user)):
+    hobbies = get_user_hobbies(user_id)
+    if not hobbies:
+        return {"message": "Aun no tienes hobbies seleccionados. Entra a Ajustes y elige tus pasatiempos para recibir tu reto diario."}
+    rng = random.Random(f"{user_id}:{date.today().isoformat()}")
+    hobby = rng.choice(hobbies)
+    return {"message": get_message(hobby)}
