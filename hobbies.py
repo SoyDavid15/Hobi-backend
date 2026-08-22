@@ -34,6 +34,8 @@ def get_current_user(authorization: str = Header(..., alias="Authorization")) ->
 
 def get_user_hobbies(user_id: str) -> list[str]:
     res = supabase_admin.table("user_hobbies").select("hobby_id").eq("user_id", user_id).execute()
+    if not res or not res.data:
+        return []
     return [row["hobby_id"] for row in res.data]
 
 
@@ -46,7 +48,9 @@ def get_daily_challenge(user_id: str, challenge_date: str) -> str | None:
         .maybe_single()
         .execute()
     )
-    return res.data["challenge"] if res.data else None
+    if res and res.data:
+        return res.data.get("challenge")
+    return None
 
 
 def save_daily_challenge(user_id: str, challenge_date: str, hobby_id: str, challenge: str) -> None:
