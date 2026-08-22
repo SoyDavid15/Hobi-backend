@@ -1,6 +1,8 @@
+import os
 import random
 from datetime import date
-
+from dotenv import load_dotenv
+import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,6 +15,7 @@ from hobbies import (
     save_daily_challenge,
 )
 
+load_dotenv()
 
 app = FastAPI()
 
@@ -48,3 +51,8 @@ def message(user_id: str = Depends(get_current_user)):
         if cached:
             return {"message": cached}
     return {"message": challenge}
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", os.getenv("WEBSITES_PORT", "8000")))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
