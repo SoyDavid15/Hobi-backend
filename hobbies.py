@@ -68,37 +68,26 @@ def save_daily_challenge(user_id: str, challenge_date: str, period: str, hobby_i
 
 
 def complete_daily_challenge(user_id: str, challenge_date: str, period: str, photo_url: str) -> dict | None:
+    existing = get_daily_challenge(user_id, challenge_date, period)
+    
+    payload = {
+        "user_id": user_id,
+        "challenge_date": challenge_date,
+        "period": period,
+        "photo_url": photo_url,
+        "is_completed": True,
+        "completed_at": "now()",
+    }
+    payload["challenge"] = existing.get("challenge") if (existing and existing.get("challenge")) else "Reto completado con éxito"
+    payload["hobby_id"] = existing.get("hobby_id") if (existing and existing.get("hobby_id")) else "General"
+
     res = (
         supabase_admin.table("daily_challenges")
-        .update({
-            "photo_url": photo_url,
-            "is_completed": True,
-            "period": period,
-            "completed_at": "now()",
-        })
-        .eq("user_id", user_id)
-        .eq("challenge_date", challenge_date)
-        .eq("period", period)
+        .upsert(payload, on_conflict="user_id,challenge_date,period")
         .execute()
     )
     if res and res.data:
         return res.data[0]
-
-    # Fallback sin filtro de periodo en caso de que la fila se haya creado antes de migrar
-    res2 = (
-        supabase_admin.table("daily_challenges")
-        .update({
-            "photo_url": photo_url,
-            "is_completed": True,
-            "period": period,
-            "completed_at": "now()",
-        })
-        .eq("user_id", user_id)
-        .eq("challenge_date", challenge_date)
-        .execute()
-    )
-    if res2 and res2.data:
-        return res2.data[0]
     return None
 
 
