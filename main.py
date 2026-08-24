@@ -75,7 +75,7 @@ def message(
         }
     rng = random.Random(f"{user_id}:{today}:{current_period}")
     hobby = rng.choice(hobbies)
-    challenge = get_message(hobby)
+    challenge = get_message(hobby, today, current_period)
     try:
         save_daily_challenge(user_id, today, current_period, hobby, challenge)
     except Exception:

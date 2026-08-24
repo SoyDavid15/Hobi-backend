@@ -18,15 +18,21 @@ HOBBY_PROMPTS = {
 }
 
 
-def get_message(hobby: str) -> str:
+def get_message(hobby: str, date_str: str | None = None, period: str | None = None) -> str:
     extra = HOBBY_PROMPTS.get(
         hobby,
         f"Dame unicamente un reto de {hobby} corto y facil de hacer para hoy, con una rutina de 1 hora",
     )
+    if date_str and period in ("AM", "PM"):
+        period_label = "manana" if period == "AM" else "tarde"
+        extra += (
+            f". Contexto: hoy es {date_str}, turno de la {period_label}. "
+            "Propon un reto distinto a los de dias y turnos anteriores, evita repetir actividades."
+        )
     client = genai.Client(api_key=os.getenv("GEMINI_KEY"))
     response = client.models.generate_content(
         model=model,
-        contents=prompt + extra,
-        config=types.GenerateContentConfig(temperature=0),
+        contents=prompt + " " + extra,
+        config=types.GenerateContentConfig(temperature=0.9),
     )
     return "\n".join(response.text.strip().splitlines()[:2])
