@@ -73,6 +73,7 @@ def complete_daily_challenge(user_id: str, challenge_date: str, period: str, pho
         .update({
             "photo_url": photo_url,
             "is_completed": True,
+            "period": period,
             "completed_at": "now()",
         })
         .eq("user_id", user_id)
@@ -82,6 +83,22 @@ def complete_daily_challenge(user_id: str, challenge_date: str, period: str, pho
     )
     if res and res.data:
         return res.data[0]
+
+    # Fallback sin filtro de periodo en caso de que la fila se haya creado antes de migrar
+    res2 = (
+        supabase_admin.table("daily_challenges")
+        .update({
+            "photo_url": photo_url,
+            "is_completed": True,
+            "period": period,
+            "completed_at": "now()",
+        })
+        .eq("user_id", user_id)
+        .eq("challenge_date", challenge_date)
+        .execute()
+    )
+    if res2 and res2.data:
+        return res2.data[0]
     return None
 
 
@@ -90,9 +107,8 @@ def get_completed_challenges(user_id: str) -> list[dict]:
         supabase_admin.table("daily_challenges")
         .select("id, challenge, is_completed, photo_url, challenge_date, hobby_id, period, completed_at, created_at")
         .eq("user_id", user_id)
-        .eq("is_completed", True)
+        .not_.is_("photo_url", "null")
         .order("challenge_date", desc=True)
-        .order("period", desc=True)
         .execute()
     )
     if not res or not res.data:
