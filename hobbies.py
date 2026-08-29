@@ -1,22 +1,23 @@
 import os
-
+import re
+from datetime import datetime
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Header, HTTPException
 from supabase import create_client
 
 load_dotenv()
 
-supabase = create_client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_ANON_KEY"),
-)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
-supabase_admin = create_client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
-)
+supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 router = APIRouter(prefix="/hobbies", tags=["hobbies"])
+
+VALID_HOBBIES = {"Musica", "Deporte", "Videojuegos", "Arte", "Lectura", "Cocina"}
+DATE_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def get_current_user(authorization: str = Header(..., alias="Authorization")) -> str:
@@ -32,6 +33,26 @@ def get_current_user(authorization: str = Header(..., alias="Authorization")) ->
     return res.user.id
 
 
+def validate_date(date_str: str) -> str:
+    if not DATE_REGEX.match(date_str):
+        raise HTTPException(status_code=400, detail="Formato de fecha inválido (YYYY-MM-DD)")
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Fecha inválida")
+    return date_str
+
+
+def validate_photo_url(photo_url: str, user_id: str) -> str:
+    if not photo_url or not isinstance(photo_url, str):
+        raise HTTPException(status_code=400, detail="URL de foto inválida")
+    # Asegurar que la URL apunta al bucket challenge-photos y pertenece estrictamente al user_id
+    expected_prefix = f"{SUPABASE_URL}/storage/v1/object/public/challenge-photos/{user_id}/"
+    if not photo_url.startswith(expected_prefix):
+        raise HTTPException(status_code=403, detail="URL de foto no autorizada o inválida")
+    return photo_url
+
+
 def get_user_hobbies(user_id: str) -> list[str]:
     res = supabase_admin.table("user_hobbies").select("hobby_id").eq("user_id", user_id).execute()
     if not res or not res.data:
@@ -40,6 +61,9 @@ def get_user_hobbies(user_id: str) -> list[str]:
 
 
 def get_daily_challenge(user_id: str, challenge_date: str, period: str = "AM") -> dict | None:
+    validate_date(challenge_date)
+    if period not in ("AM", "PM"):
+        period = "AM"
     res = (
         supabase_admin.table("daily_challenges")
         .select("id, challenge, is_completed, photo_url, challenge_date, hobby_id, period, created_at, completed_at")
@@ -55,6 +79,11 @@ def get_daily_challenge(user_id: str, challenge_date: str, period: str = "AM") -
 
 
 def save_daily_challenge(user_id: str, challenge_date: str, period: str, hobby_id: str, challenge: str) -> None:
+    validate_date(challenge_date)
+    if period not in ("AM", "PM"):
+        period = "AM"
+    if hobby_id not in VALID_HOBBIES and hobby_id != "General":
+        hobby_id = "General"
     supabase_admin.table("daily_challenges").insert(
         {
             "user_id": user_id,
@@ -68,6 +97,11 @@ def save_daily_challenge(user_id: str, challenge_date: str, period: str, hobby_i
 
 
 def complete_daily_challenge(user_id: str, challenge_date: str, period: str, photo_url: str) -> dict | None:
+    validate_date(challenge_date)
+    if period not in ("AM", "PM"):
+        period = "AM"
+    validate_photo_url(photo_url, user_id)
+
     existing = get_daily_challenge(user_id, challenge_date, period)
     
     payload = {
@@ -116,6 +150,8 @@ def get_hobbies(user_id: str = Depends(get_current_user)):
 
 @router.post("/{hobby_id}")
 def add_hobby(hobby_id: str, user_id: str = Depends(get_current_user)):
+    if hobby_id not in VALID_HOBBIES:
+        raise HTTPException(status_code=400, detail="Hobby inválido")
     try:
         supabase_admin.table("user_hobbies").insert({"user_id": user_id, "hobby_id": hobby_id}).execute()
     except Exception as e:
@@ -125,6 +161,8 @@ def add_hobby(hobby_id: str, user_id: str = Depends(get_current_user)):
 
 @router.delete("/{hobby_id}")
 def remove_hobby(hobby_id: str, user_id: str = Depends(get_current_user)):
+    if hobby_id not in VALID_HOBBIES:
+        raise HTTPException(status_code=400, detail="Hobby inválido")
     try:
         supabase_admin.table("user_hobbies").delete().eq("user_id", user_id).eq("hobby_id", hobby_id).execute()
     except Exception as e:
