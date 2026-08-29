@@ -18,6 +18,7 @@ from hobbies import (
     save_daily_challenge,
     validate_date,
 )
+from social import router as social_router
 
 load_dotenv()
 
@@ -43,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(hobbies_router)
+app.include_router(social_router)
 
 
 def get_current_period() -> str:
