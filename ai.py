@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-model = "gemini-3.5-flash-lite"
+model = "gemini-1.5-flash"
 prompt = (
     "Eres una app de retos diarios creativos y específicos basados en pasatiempos para personas que se quieren alejar del doomscroll. "
     "Devuelve una respuesta corta en máximo 2 líneas. No uses lenguaje de programación ni markdown. "
