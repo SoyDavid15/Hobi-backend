@@ -4,6 +4,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Header, HTTPException
 from supabase import create_client
+from ai import verify_challenge_photo
 
 load_dotenv()
 
@@ -103,7 +104,19 @@ def complete_daily_challenge(user_id: str, challenge_date: str, period: str, pho
     validate_photo_url(photo_url, user_id)
 
     existing = get_daily_challenge(user_id, challenge_date, period)
-    
+    challenge_text = existing.get("challenge") if (existing and existing.get("challenge")) else "Reto completado con éxito"
+    hobby_id = existing.get("hobby_id") if (existing and existing.get("hobby_id")) else "General"
+
+    # Verificar con IA si la foto cumple el reto
+    verification = verify_challenge_photo(challenge_text, photo_url)
+    if not verification.get("is_valid", True):
+        raise HTTPException(
+            status_code=400,
+            detail=verification.get("feedback", "La foto no parece coincidir con el reto asignado. Inténtalo de nuevo."),
+        )
+
+    ai_feedback = verification.get("feedback", "¡Reto completado con éxito!")
+
     payload = {
         "user_id": user_id,
         "challenge_date": challenge_date,
@@ -111,9 +124,9 @@ def complete_daily_challenge(user_id: str, challenge_date: str, period: str, pho
         "photo_url": photo_url,
         "is_completed": True,
         "completed_at": "now()",
+        "challenge": challenge_text,
+        "hobby_id": hobby_id,
     }
-    payload["challenge"] = existing.get("challenge") if (existing and existing.get("challenge")) else "Reto completado con éxito"
-    payload["hobby_id"] = existing.get("hobby_id") if (existing and existing.get("hobby_id")) else "General"
 
     res = (
         supabase_admin.table("daily_challenges")
@@ -121,8 +134,10 @@ def complete_daily_challenge(user_id: str, challenge_date: str, period: str, pho
         .execute()
     )
     if res and res.data:
-        return res.data[0]
-    return None
+        result_row = res.data[0]
+        result_row["ai_feedback"] = ai_feedback
+        return result_row
+    return {"success": True, "ai_feedback": ai_feedback}
 
 
 def get_completed_challenges(user_id: str) -> list[dict]:

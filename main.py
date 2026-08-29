@@ -122,7 +122,8 @@ def complete_challenge(body: CompleteChallengeRequest, user_id: str = Depends(ge
     validate_date(today)
     current_period = body.period if body.period in ("AM", "PM") else get_current_period()
     updated = complete_daily_challenge(user_id, today, current_period, body.photo_url)
-    return {"success": True, "challenge": updated}
+    feedback = updated.get("ai_feedback") if isinstance(updated, dict) else None
+    return {"success": True, "challenge": updated, "feedback": feedback}
 
 
 if __name__ == "__main__":
